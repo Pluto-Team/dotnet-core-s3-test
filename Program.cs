@@ -26,6 +26,8 @@ namespace dotnet_core_s3_test
 
         private static async Task UploadFileAsync() {
 
+            // uploading the file to the S3 bucket and added in 2 tags to the object so that the service can down below can query for Skills that the person may have in the resume
+
             try {
                 var fileTransferUtility =
                     new TransferUtility(s3Client);
@@ -43,12 +45,6 @@ namespace dotnet_core_s3_test
                     }
                 };
 
-                PutObjectTaggingRequest putObjectTaggingRequest = new PutObjectTaggingRequest();
-                putObjectTaggingRequest.BucketName = bucketName;
-                putObjectTaggingRequest.Key = keyName;
-
-
-
                 await fileTransferUtility.UploadAsync(fileTransferUtilityRequest);
                 Console.WriteLine("Upload complete");
             }
@@ -65,11 +61,13 @@ namespace dotnet_core_s3_test
         }
 
         private static async Task FindTaskByTag() {
+            // task to retrieve all of the objects in the S3 bucket and performs a search for a user with Linux experience
              try {
+                 // retrieve the list of objects
                  ListObjectsV2Request request = new ListObjectsV2Request
                 {
                     BucketName = bucketName,
-                    MaxKeys = 10
+                    MaxKeys = 100
                 };
                 ListObjectsV2Response response;
                 do
@@ -77,6 +75,8 @@ namespace dotnet_core_s3_test
                     response = await s3Client.ListObjectsV2Async(request);
 
                     // Process the response.
+
+                    // iterates through all of the objects and determines if the object contains any linux experience
                     foreach (S3Object entry in response.S3Objects)
                     {
                         
@@ -86,6 +86,7 @@ namespace dotnet_core_s3_test
                             getObjectTaggingRequest.BucketName = entry.BucketName;
                             getObjectTaggingRequest.Key = entry.Key;
 
+                            // iterates through all of the tags within the object
                             GetObjectTaggingResponse objectTaggingResponse = await s3Client.GetObjectTaggingAsync( getObjectTaggingRequest );
                             Console.WriteLine( "Metadata tag value for " + entry.Key + " are the following." );
                             for( int i = 0; i < objectTaggingResponse.Tagging.Count; i++ ) {
