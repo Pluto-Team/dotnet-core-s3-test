@@ -13,6 +13,8 @@ namespace dotnet_core_s3_test
         private const string bucketName = "candidate-tracker-candidate-documents";
         private const string keyName = "20200721_120407.jpg";
         private const string filePath = "/Users/brian.highnam/Downloads/" + keyName;
+        private const int KEY_SIZE_LIMIT = 300;
+
         // Specify your bucket region (an example region is shown).
         private static readonly RegionEndpoint bucketRegion = RegionEndpoint.USEast1;
         private static IAmazonS3 s3Client;
@@ -20,8 +22,9 @@ namespace dotnet_core_s3_test
         {
             Console.WriteLine("Hello World!");
             s3Client = new AmazonS3Client( bucketRegion );
-            UploadFileAsync().Wait();
-            FindTaskByTag().Wait();
+            //UploadFileAsync().Wait();
+           // FindTaskByTag().Wait();
+            DownloadFileFromS3();
         }
 
         private static async Task UploadFileAsync() {
@@ -45,6 +48,7 @@ namespace dotnet_core_s3_test
                     }
                 };
 
+                // Performs the actual upload to the S3 bucket
                 await fileTransferUtility.UploadAsync(fileTransferUtilityRequest);
                 Console.WriteLine("Upload complete");
             }
@@ -67,8 +71,8 @@ namespace dotnet_core_s3_test
                  ListObjectsV2Request request = new ListObjectsV2Request
                 {
                     BucketName = bucketName,
-                    MaxKeys = 100
-                };
+                    MaxKeys = KEY_SIZE_LIMIT
+                 };
                 ListObjectsV2Response response;
                 do
                 {
@@ -88,6 +92,7 @@ namespace dotnet_core_s3_test
 
                             // iterates through all of the tags within the object
                             GetObjectTaggingResponse objectTaggingResponse = await s3Client.GetObjectTaggingAsync( getObjectTaggingRequest );
+
                             Console.WriteLine( "Metadata tag value for " + entry.Key + " are the following." );
                             for( int i = 0; i < objectTaggingResponse.Tagging.Count; i++ ) {
                                 Console.WriteLine( "Metadata tag Key: " + objectTaggingResponse.Tagging[ i ].Key + "Metadata Value: " + objectTaggingResponse.Tagging[ i ].Value );
@@ -97,8 +102,6 @@ namespace dotnet_core_s3_test
                                 }
                             }
                     }
-                    Console.WriteLine("Next Continuation Token: {0}", response.NextContinuationToken);
-                    request.ContinuationToken = response.NextContinuationToken;
                 } while (response.IsTruncated);
              }
 
@@ -113,6 +116,24 @@ namespace dotnet_core_s3_test
                 Console.ReadKey();
             }
 
+        }
+
+        private static void DownloadFileFromS3() {
+            try {
+                TransferUtility fileTransferUtility = new TransferUtility( s3Client );
+                Console.WriteLine( "#### DOWNLOADING FILE FROM S3 TO FILE SYSTEM. ####" );
+
+                fileTransferUtility.Download( "file-drop/candidate-tracker-site-test.xml", bucketName, "candidate-tracker-site-test.xml" );
+                Console.WriteLine( "File Download is complete" );
+            }
+            catch ( AmazonS3Exception amazonS3Exception  ) {
+                Console.WriteLine("S3 error occurred. Exception: " + amazonS3Exception.ToString());
+                Console.ReadKey();
+            }
+            catch ( Exception e ) {
+                Console.WriteLine("Exception: " + e.ToString());
+                Console.ReadKey();
+            }
         }
 
 
